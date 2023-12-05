@@ -1,197 +1,196 @@
-local util = require "yanki.util"
-local pickers = require "telescope.pickers"
-local finders = require "telescope.finders"
+local util = require("yanki.util")
+local pickers = require("telescope.pickers")
+local finders = require("telescope.finders")
 local conf = require("telescope.config").values
-local actions = require "telescope.actions"
-local action_state = require "telescope.actions.state"
-local state = require "telescope.state"
+local actions = require("telescope.actions")
+local action_state = require("telescope.actions.state")
+local state = require("telescope.state")
 
 local M = {}
 
 function M.setup(parm)
-    parm = (parm or {})
-    vim.api.nvim_exec([[
+	parm = (parm or {})
+	vim.api.nvim_exec(
+		[[
       augroup WatchYankRegister
         autocmd!
         autocmd TextYankPost * lua require("yanki").OnTextYank()
       augroup END
-    ]], false)
-    M.settings = parm
+    ]],
+		false
+	)
+	M.settings = parm
 end
 
 M.yanks = {}
 M.yankIndex = 1
 
 function M.OnTextYank()
-    local yankedText = vim.fn.getreg('"', 1)
-    local lines = {}
+	local yankedText = vim.fn.getreg('"', 1)
+	local lines = {}
 
-    table.insert(lines, yankedText)
-    for t, transformer in ipairs(M.settings.transformer) do
-        if transformer.active then
-            local newLines = {}
-            for i = 1, #lines do
-                local transformedText = transformer.action(lines[i])
+	table.insert(lines, yankedText)
+	for t, transformer in ipairs(M.settings.transformer or {}) do
+		if transformer.active then
+			local newLines = {}
+			for i = 1, #lines do
+				local transformedText = transformer.action(lines[i])
 
-                if type(transformedText) == "table" then
-                    for _, v in ipairs(transformedText) do
-                        print(vim.inspect(v))
-                        table.insert(newLines, v)
-                    end
-                elseif type(transformedText) == "string" then
-                    table.insert(newLines, transformedText)
-                end
-            end
-            lines = newLines
-        end
-    end
+				if type(transformedText) == "table" then
+					for _, v in ipairs(transformedText) do
+						table.insert(newLines, v)
+					end
+				elseif type(transformedText) == "string" then
+					table.insert(newLines, transformedText)
+				end
+			end
+			lines = newLines
+		end
+	end
 
-    for _, v in ipairs(lines) do table.insert(M.yanks, v) end
+	for _, v in ipairs(lines) do
+		table.insert(M.yanks, v)
+	end
 end
 
 function M.PutNext()
-    if #M.yanks == 0 then return end
-    local nextPut = M.yanks[M.yankIndex]
-    M.Put(nextPut)
+	if #M.yanks == 0 then
+		return
+	end
+	local nextPut = M.yanks[M.yankIndex]
+	M.Put(nextPut)
 end
 
 function M.Put(text)
-    local currentLine = vim.fn.line('.')
-    local currentCol = vim.fn.col('.')
+	local currentLine = vim.fn.line(".")
+	local currentCol = vim.fn.col(".")
 
-    if M.settings.PutInNewLine or string.sub(text, -1) == "\n" then
-        local lines = vim.fn.split(text, '\n')
+	if M.settings.PutInNewLine or string.sub(text, -1) == "\n" then
+		local lines = vim.fn.split(text, "\n")
 
-        vim.api.nvim_buf_set_lines(0, currentLine, currentLine, false, lines)
-    else
-        local lines = vim.split(text, '\n')
-        vim.api.nvim_buf_set_text(0, currentLine - 1, currentCol - 1,
-                                  currentLine - 1, currentCol - 1, lines)
-    end
-    M.yankIndex = (M.yankIndex % #M.yanks) + 1
+		vim.api.nvim_buf_set_lines(0, currentLine, currentLine, false, lines)
+	else
+		local lines = vim.split(text, "\n")
+		vim.api.nvim_buf_set_text(0, currentLine - 1, currentCol - 1, currentLine - 1, currentCol - 1, lines)
+	end
+	M.yankIndex = (M.yankIndex % #M.yanks) + 1
 end
 
 function M.ClearYankHistory()
-    M.yanks = {}
-    M.yankIndex = 1
+	M.yanks = {}
+	M.yankIndex = 1
 end
 
 function M.ShowYankHistory(opts)
-    opts = opts or {}
+	opts = opts or {}
 
-    pickers.new(opts, {
-        prompt_title = "Yank History",
-        finder = M.GetYankFinder(),
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(prompt_bufnr, map)
-            actions.select_default:replace(function()
-                actions.close(prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                -- print(vim.inspect(selection))
-                -- vim.api.nvim_put({selection[1]}, "", false, true)
-                M.Put(selection.ordinal)
-            end)
-            map({"i", "n"}, "<C-c>", function(_prompt_bufnr)
-                M.ClearYankHistory()
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetYankFinder())
-            end)
-            map({"i", "n"}, "<C-n>", function(_prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                M.yankIndex = selection.value[3]
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetYankFinder())
-            end)
-            map({"i", "n"}, "<C-d>", function(_prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                table.remove(M.yanks, selection.value[3])
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetYankFinder())
-            end)
-            map({"i", "n"}, "<C-u>", function(_prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                M.yanks = util.Swap(M.yanks, selection.value[3],
-                                    (selection.value[3] % #M.yanks) + 1)
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetYankFinder())
-            end)
-            return true
-        end
-    }):find()
+	pickers
+		.new(opts, {
+			prompt_title = "Yank History",
+			finder = M.GetYankFinder(),
+			sorter = conf.generic_sorter(opts),
+			attach_mappings = function(prompt_bufnr, map)
+				actions.select_default:replace(function()
+					actions.close(prompt_bufnr)
+					local selection = action_state.get_selected_entry()
+					M.Put(selection.ordinal)
+				end)
+				map({ "i", "n" }, "<C-c>", function(_prompt_bufnr)
+					M.ClearYankHistory()
+					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
+				end)
+				map({ "i", "n" }, "<C-n>", function(_prompt_bufnr)
+					local selection = action_state.get_selected_entry()
+					M.yankIndex = selection.value[3]
+					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
+				end)
+				map({ "i", "n" }, "<C-d>", function(_prompt_bufnr)
+					local selection = action_state.get_selected_entry()
+					table.remove(M.yanks, selection.value[3])
+					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
+				end)
+				map({ "i", "n" }, "<C-u>", function(_prompt_bufnr)
+					local selection = action_state.get_selected_entry()
+					M.yanks = util.Swap(M.yanks, selection.value[3], (selection.value[3] % #M.yanks) + 1)
+					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
+				end)
+				return true
+			end,
+		})
+		:find()
 end
 
 function M.ShowTransformers(opts)
-    opts = opts or {}
+	opts = opts or {}
 
-    pickers.new(opts, {
-        prompt_title = "Yank History",
-        finder = M.GetTransformerFinder(),
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(prompt_bufnr, map)
-            actions.select_default:replace(function()
-                local selection = action_state.get_selected_entry()
-                -- vim.api.nvim_put({selection[1]}, "", false, true)
-                M.settings.transformer[selection.index].active = not M.settings
-                                                                     .transformer[selection.index]
-                                                                     .active
-                -- selection.value[1].active = true
-                action_state.get_current_picker(prompt_bufnr):refresh(
-                    M.GetTransformerFinder())
-            end)
-            map({"i", "n"}, "<C-u>", function(_prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                M.settings.transformer =
-                    util.Swap(M.settings.transformer, selection.value[2],
-                              (selection.value[2] % #M.settings.transformer) + 1)
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetTransformerFinder())
-            end)
-            return true
-        end
-    }):find()
+	pickers
+		.new(opts, {
+			prompt_title = "Yank History",
+			finder = M.GetTransformerFinder(),
+			sorter = conf.generic_sorter(opts),
+			attach_mappings = function(prompt_bufnr, map)
+				actions.select_default:replace(function()
+					local selection = action_state.get_selected_entry()
+					-- vim.api.nvim_put({selection[1]}, "", false, true)
+					M.settings.transformer[selection.index].active = not M.settings.transformer[selection.index].active
+					-- selection.value[1].active = true
+					action_state.get_current_picker(prompt_bufnr):refresh(M.GetTransformerFinder())
+				end)
+				map({ "i", "n" }, "<C-u>", function(_prompt_bufnr)
+					local selection = action_state.get_selected_entry()
+					M.settings.transformer = util.Swap(
+						M.settings.transformer,
+						selection.value[2],
+						(selection.value[2] % #M.settings.transformer) + 1
+					)
+					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetTransformerFinder())
+				end)
+				return true
+			end,
+		})
+		:find()
 end
 
 function M.GetTransformerFinder()
-    local transformerList = {}
+	local transformerList = {}
 
-    for i = 1, #M.settings.transformer do
-        table.insert(transformerList, {M.settings.transformer[i], i})
-    end
+	for i = 1, #M.settings.transformer do
+		table.insert(transformerList, { M.settings.transformer[i], i })
+	end
 
-    local finder = finders.new_table {
-        results = transformerList,
-        entry_maker = function(entry)
-            return {
-                value = entry,
-                display = entry[1].active and "*" .. entry[1].name or
-                    entry[1].name,
-                ordinal = entry[1].name
-            }
-        end
-    }
+	local finder = finders.new_table({
+		results = transformerList,
+		entry_maker = function(entry)
+			return {
+				value = entry,
+				display = entry[1].active and "*" .. entry[1].name or entry[1].name,
+				ordinal = entry[1].name,
+			}
+		end,
+	})
 
-    return finder
+	return finder
 end
 
 function M.GetYankFinder()
-    local yankList = {}
+	local yankList = {}
 
-    for i = 1, #M.yanks do
-        table.insert(yankList, {M.yanks[i], i == M.yankIndex, i})
-    end
+	for i = 1, #M.yanks do
+		table.insert(yankList, { M.yanks[i], i == M.yankIndex, i })
+	end
 
-    local finder = finders.new_table {
-        results = yankList,
-        entry_maker = function(entry)
-            return {
-                value = entry,
-                display = entry[2] and "*" .. entry[1] or entry[1],
-                ordinal = entry[1]
-            }
-        end
-    }
+	local finder = finders.new_table({
+		results = yankList,
+		entry_maker = function(entry)
+			return {
+				value = entry,
+				display = entry[2] and "*" .. entry[1] or entry[1],
+				ordinal = entry[1],
+			}
+		end,
+	})
 
-    return finder
+	return finder
 end
 
 return M
