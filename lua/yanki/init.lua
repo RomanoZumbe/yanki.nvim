@@ -24,21 +24,29 @@ M.yankIndex = 1
 
 function M.OnTextYank()
     local yankedText = vim.fn.getreg('"', 1)
+    local lines = {}
 
-    print(vim.inspect(M.settings.transformer))
-    for k, transformer in ipairs(M.settings.transformer) do
+    table.insert(lines, yankedText)
+    for t, transformer in ipairs(M.settings.transformer) do
         if transformer.active then
-            yankedText = transformer.action(yankedText)
+            local newLines = {}
+            for i = 1, #lines do
+                local transformedText = transformer.action(lines[i])
+
+                if type(transformedText) == "table" then
+                    for _, v in ipairs(transformedText) do
+                        print(vim.inspect(v))
+                        table.insert(newLines, v)
+                    end
+                elseif type(transformedText) == "string" then
+                    table.insert(newLines, transformedText)
+                end
+            end
+            lines = newLines
         end
     end
 
-    if M.settings.SplitLines then
-        local lines = vim.fn.split(yankedText, '\n')
-
-        for _, line in ipairs(lines) do table.insert(M.yanks, line) end
-    else
-        table.insert(M.yanks, yankedText)
-    end
+    for _, v in ipairs(lines) do table.insert(M.yanks, v) end
 end
 
 function M.PutNext()
@@ -122,14 +130,20 @@ function M.ShowTransformers(opts)
         attach_mappings = function(prompt_bufnr, map)
             actions.select_default:replace(function()
                 local selection = action_state.get_selected_entry()
-                print("enter pressed")
-                print(vim.inspect(selection.value[1].active))
                 -- vim.api.nvim_put({selection[1]}, "", false, true)
                 M.settings.transformer[selection.index].active = not M.settings
                                                                      .transformer[selection.index]
                                                                      .active
                 -- selection.value[1].active = true
                 action_state.get_current_picker(prompt_bufnr):refresh(
+                    M.GetTransformerFinder())
+            end)
+            map({"i", "n"}, "<C-u>", function(_prompt_bufnr)
+                local selection = action_state.get_selected_entry()
+                M.settings.transformer =
+                    util.Swap(M.settings.transformer, selection.value[2],
+                              (selection.value[2] % #M.settings.transformer) + 1)
+                action_state.get_current_picker(_prompt_bufnr):refresh(
                     M.GetTransformerFinder())
             end)
             return true
@@ -141,11 +155,8 @@ function M.GetTransformerFinder()
     local transformerList = {}
 
     for i = 1, #M.settings.transformer do
-        print(vim.inspect(M.settings.transformer[i]))
         table.insert(transformerList, {M.settings.transformer[i], i})
     end
-
-    print(vim.inspect(transformerList))
 
     local finder = finders.new_table {
         results = transformerList,
