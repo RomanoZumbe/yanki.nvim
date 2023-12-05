@@ -132,30 +132,6 @@ function M.ShowTransformers(opts)
                 action_state.get_current_picker(prompt_bufnr):refresh(
                     M.GetTransformerFinder())
             end)
-            map({"i", "n"}, "<C-a>", function(_prompt_bufnr)
-                M.ClearYankHistory()
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetTransformerFinder())
-            end)
-            map({"i", "n"}, "<C-n>", function(_prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                M.yankIndex = selection.value[3]
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetYankFinder())
-            end)
-            map({"i", "n"}, "<C-d>", function(_prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                table.remove(M.yanks, selection.value[3])
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetYankFinder())
-            end)
-            map({"i", "n"}, "<C-u>", function(_prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                M.yanks = util.Swap(M.yanks, selection.value[3],
-                                    (selection.value[3] % #M.yanks) + 1)
-                action_state.get_current_picker(_prompt_bufnr):refresh(
-                    M.GetYankFinder())
-            end)
             return true
         end
     }):find()
