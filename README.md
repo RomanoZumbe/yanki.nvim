@@ -1,6 +1,5 @@
 # yanki.nvim
 
----
 
 Yanki is a Neovim plugin designed to enhance your yanking experience by creating a yank history. It empowers users to easily insert from this history sequentially, making actions repeatable.
 
@@ -30,7 +29,7 @@ Yanki is a Neovim plugin designed to enhance your yanking experience by creating
 }
 ```
 
-## ⚙️CConfiguration
+## ⚙️Configuration
 
 The Yanki plugin offers a flexible configuration to tailor the yanking behavior according to your needs. One key parameter is the `transformer` setup option, 
 allowing you to define a list of transformations that will be applied to the yanked text before it is added to the history.
