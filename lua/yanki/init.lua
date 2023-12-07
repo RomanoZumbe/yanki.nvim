@@ -10,15 +10,12 @@ local M = {}
 
 function M.setup(parm)
 	parm = (parm or {})
-	vim.api.nvim_exec(
-		[[
+	vim.api.nvim_exec([[
       augroup WatchYankRegister
         autocmd!
         autocmd TextYankPost * lua require("yanki").OnTextYank()
       augroup END
-    ]],
-		false
-	)
+    ]], false)
 	M.settings = parm
 end
 
@@ -48,15 +45,11 @@ function M.OnTextYank()
 		end
 	end
 
-	for _, v in ipairs(lines) do
-		table.insert(M.yanks, v)
-	end
+	for _, v in ipairs(lines) do table.insert(M.yanks, v) end
 end
 
 function M.PutNext()
-	if #M.yanks == 0 then
-		return
-	end
+	if #M.yanks == 0 then return end
 	local nextPut = M.yanks[M.yankIndex]
 	M.Put(nextPut)
 end
@@ -71,7 +64,8 @@ function M.Put(text)
 		vim.api.nvim_buf_set_lines(0, currentLine, currentLine, false, lines)
 	else
 		local lines = vim.split(text, "\n")
-		vim.api.nvim_buf_set_text(0, currentLine - 1, currentCol - 1, currentLine - 1, currentCol - 1, lines)
+		vim.api.nvim_buf_set_text(0, currentLine - 1, currentCol - 1,
+			currentLine - 1, currentCol - 1, lines)
 	end
 	M.yankIndex = (M.yankIndex % #M.yanks) + 1
 end
@@ -84,71 +78,74 @@ end
 function M.ShowYankHistory(opts)
 	opts = opts or {}
 
-	pickers
-		.new(opts, {
-			prompt_title = "Yank History",
-			finder = M.GetYankFinder(),
-			sorter = conf.generic_sorter(opts),
-			attach_mappings = function(prompt_bufnr, map)
-				actions.select_default:replace(function()
-					actions.close(prompt_bufnr)
-					local selection = action_state.get_selected_entry()
-					M.Put(selection.ordinal)
-				end)
-				map({ "i", "n" }, "<C-c>", function(_prompt_bufnr)
-					M.ClearYankHistory()
-					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
-				end)
-				map({ "i", "n" }, "<C-n>", function(_prompt_bufnr)
-					local selection = action_state.get_selected_entry()
-					M.yankIndex = selection.value[3]
-					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
-				end)
-				map({ "i", "n" }, "<C-d>", function(_prompt_bufnr)
-					local selection = action_state.get_selected_entry()
-					table.remove(M.yanks, selection.value[3])
-					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
-				end)
-				map({ "i", "n" }, "<C-u>", function(_prompt_bufnr)
-					local selection = action_state.get_selected_entry()
-					M.yanks = util.Swap(M.yanks, selection.value[3], (selection.value[3] % #M.yanks) + 1)
-					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetYankFinder())
-				end)
-				return true
-			end,
-		})
-		:find()
+	pickers.new(opts, {
+		prompt_title = "Yank History",
+		finder = M.GetYankFinder(),
+		sorter = conf.generic_sorter(opts),
+		attach_mappings = function(prompt_bufnr, map)
+			actions.select_default:replace(function()
+				actions.close(prompt_bufnr)
+				local selection = action_state.get_selected_entry()
+				M.Put(selection.ordinal)
+			end)
+			map({ "i", "n" }, "<C-c>", function(_prompt_bufnr)
+				-- M.ClearYankHistory()
+				action_state.get_current_picker(_prompt_bufnr):refresh(
+					M.GetYankFinder())
+			end)
+			map({ "i", "n" }, "<C-n>", function(_prompt_bufnr)
+				local selection = action_state.get_selected_entry()
+				M.yankIndex = selection.value[3]
+				action_state.get_current_picker(_prompt_bufnr):refresh(
+					M.GetYankFinder())
+			end)
+			map({ "i", "n" }, "<C-d>", function(_prompt_bufnr)
+				local selection = action_state.get_selected_entry()
+				table.remove(M.yanks, selection.value[3])
+				action_state.get_current_picker(_prompt_bufnr):refresh(
+					M.GetYankFinder())
+			end)
+			map({ "i", "n" }, "<C-u>", function(_prompt_bufnr)
+				local selection = action_state.get_selected_entry()
+				M.yanks = util.Swap(M.yanks, selection.value[3],
+					(selection.value[3] % #M.yanks) + 1)
+				action_state.get_current_picker(_prompt_bufnr):refresh(
+					M.GetYankFinder())
+			end)
+			return true
+		end
+	}):find()
 end
 
 function M.ShowTransformers(opts)
 	opts = opts or {}
 
-	pickers
-		.new(opts, {
-			prompt_title = "Yank History",
-			finder = M.GetTransformerFinder(),
-			sorter = conf.generic_sorter(opts),
-			attach_mappings = function(prompt_bufnr, map)
-				actions.select_default:replace(function()
-					local selection = action_state.get_selected_entry()
-					-- vim.api.nvim_put({selection[1]}, "", false, true)
-					M.settings.transformer[selection.index].active = not M.settings.transformer[selection.index].active
-					-- selection.value[1].active = true
-					action_state.get_current_picker(prompt_bufnr):refresh(M.GetTransformerFinder())
-				end)
-				map({ "i", "n" }, "<C-u>", function(_prompt_bufnr)
-					local selection = action_state.get_selected_entry()
-					M.settings.transformer = util.Swap(
-						M.settings.transformer,
-						selection.value[2],
-						(selection.value[2] % #M.settings.transformer) + 1
-					)
-					action_state.get_current_picker(_prompt_bufnr):refresh(M.GetTransformerFinder())
-				end)
-				return true
-			end,
-		})
-		:find()
+	pickers.new(opts, {
+		prompt_title = "Transformer",
+		finder = M.GetTransformerFinder(),
+		sorter = conf.generic_sorter(opts),
+		attach_mappings = function(prompt_bufnr, map)
+			actions.select_default:replace(function()
+				local selection = action_state.get_selected_entry()
+				-- vim.api.nvim_put({selection[1]}, "", false, true)
+				M.settings.transformer[selection.index].active = not M.settings
+						.transformer[selection.index]
+						.active
+				-- selection.value[1].active = true
+				action_state.get_current_picker(prompt_bufnr):refresh(
+					M.GetTransformerFinder())
+			end)
+			map({ "i", "n" }, "<C-u>", function(_prompt_bufnr)
+				local selection = action_state.get_selected_entry()
+				M.settings.transformer =
+						util.Swap(M.settings.transformer, selection.value[2],
+							(selection.value[2] % #M.settings.transformer) + 1)
+				action_state.get_current_picker(_prompt_bufnr):refresh(
+					M.GetTransformerFinder())
+			end)
+			return true
+		end
+	}):find()
 end
 
 function M.GetTransformerFinder()
@@ -163,10 +160,11 @@ function M.GetTransformerFinder()
 		entry_maker = function(entry)
 			return {
 				value = entry,
-				display = entry[1].active and "*" .. entry[1].name or entry[1].name,
-				ordinal = entry[1].name,
+				display = entry[1].active and "*" .. entry[1].name or
+						entry[1].name,
+				ordinal = entry[1].name
 			}
-		end,
+		end
 	})
 
 	return finder
@@ -185,9 +183,9 @@ function M.GetYankFinder()
 			return {
 				value = entry,
 				display = entry[2] and "*" .. entry[1] or entry[1],
-				ordinal = entry[1],
+				ordinal = entry[1]
 			}
-		end,
+		end
 	})
 
 	return finder
