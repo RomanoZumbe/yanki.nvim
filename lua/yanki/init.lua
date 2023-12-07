@@ -71,8 +71,8 @@ function M.Put(text)
 end
 
 function M.ClearYankHistory()
-	M.yanks = {}
-	M.yankIndex = 1
+	-- M.yanks = {}
+	-- M.yankIndex = 1
 end
 
 function M.ShowYankHistory(opts)
@@ -89,7 +89,7 @@ function M.ShowYankHistory(opts)
 				M.Put(selection.ordinal)
 			end)
 			map({ "i", "n" }, "<C-c>", function(_prompt_bufnr)
-				-- M.ClearYankHistory()
+				M.ClearYankHistory()
 				action_state.get_current_picker(_prompt_bufnr):refresh(
 					M.GetYankFinder())
 			end)
