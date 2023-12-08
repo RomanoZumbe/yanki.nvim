@@ -125,7 +125,7 @@ Description:
 - Displays the current yank history in a customizable Telescope window.
 - The next entry to be inserted is marked with an asterisk (*).
 - Use <C-n> to select the next entry for insertion.
-- Press <C-c> to clear all entries in the yank history.
+- Press <C-c> to clear all entries in the yank history. (this works only in normal mode)
 - Use <C-d> to delete the currently highlighted entry.
 - Entries can be moved using <C-u>.
 
