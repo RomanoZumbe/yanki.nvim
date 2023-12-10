@@ -2,4 +2,4 @@
   command! -range -nargs=* ShowYankHistory lua require("yanki").ShowYankHistory()
   command! -range -nargs=* CleanYankHistory lua require("yanki").ClearYankHistory()
   command! -range -nargs=* ShowTransformers lua require("yanki").ShowTransformers()
-  
+  command! -range -nargs=* PutAllYanks lua require("yanki").PutAll()
